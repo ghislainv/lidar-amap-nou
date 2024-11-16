@@ -203,4 +203,40 @@ p_comp <- ggplot(aes(height_P1, height_P2), data=df_comp) +
   theme_bw()
 ggsave(file.path(out_dir_ssd, "comparison_1P_2P_10m.pdf"), p_comp)
 
+# ========================================
+# Full analysis
+# ========================================
+
+# Catalogue
+ctg <- readLAScatalog(c(las_files_P1, las_files_P2))
+ctg
+plot(ctg)
+
+# Chunk size
+opt_chunk_size(ctg) <- 150
+plot(ctg, chunk=TRUE)
+
+# DTM and DSM
+pipeline <- reader_las() +
+  chm(1, ofile=file.path(out_dir_ssd, "dsm_2P_full.tif")) +
+  dtm(1, ofile=file.path(out_dir_ssd, "dtm_2P_full.tif"))
+set_exec_options(progress=TRUE, ncores=sequential())
+exec(pipeline, on=ctg)
+
+# CHM
+dsm <- terra::rast(file.path(out_dir_ssd, "dsm_2P_aoi.tif"))
+dtm <- terra::rast(file.path(out_dir_ssd, "dtm_2P_aoi.tif"))
+chm <- dsm - dtm
+chm[chm < 0] <- 0
+varnames(chm) <- "chm"
+names(chm) <- "height"
+# Save CHM raster file
+terra::writeRaster(
+  chm,
+  file.path(out_dir_ssd, "chm_2P_aoi.tif"),
+  datatype="INT1U",
+  filetype="GTiff",
+  overwrite=TRUE,
+  NAflag=255)
+
 # End
