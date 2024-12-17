@@ -27,7 +27,7 @@ las_files_P1 <- list.files(las_P1_dir, pattern="*.las", full.names=TRUE)
 las_files_P2 <- list.files(las_P2_dir, pattern="*.las", full.names=TRUE)
 
 # Output directory
-out_dir_ssd <- "/media/ghislain/Agathis/outputs"
+out_dir_ssd <- "/media/ghislain/Agathis/outputs/ppgf"
 dir.create(out_dir_ssd, showWarnings=FALSE)
 
 # PPGF bounding box
