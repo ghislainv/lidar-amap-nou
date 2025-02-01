@@ -16,7 +16,12 @@ library(ggplot2)
 
 # Variables
 las_file_l2 <- "/media/ghislain/Agathis/20241209_IRD_CIRAD_LIVRABLES_PPRB_LDR_L2_ECOTONE/IRD_CIRAD_PPRB_LDR_L2_M1/terra_las/cloud_merged.las"
-las_file_vx20 <- "/media/ghislain/Agathis/20241212-YS-PPRB-P1-test/export/20241212-YS-PPRB-P1-test-20241217-053955-F001.laz"
+post_processed_las <- TRUE
+if (!post_processed_las) {
+  las_file_vx20 <- "/media/ghislain/Agathis/20241212-YS-PPRB-P1-test/export/20241212-YS-PPRB-P1-test-20241217-053955-F001.laz"
+} else {
+  las_file_vx20 <- "/media/ghislain/Agathis/20241212-YS-PPRB-P1-test/export/20241212-YS-PPRB-P1-test-20250112-093612-F001.las"
+}
 
 # Output directory
 out_dir_ssd <- "/media/ghislain/Agathis/outputs/l2-vx20-pprb"
@@ -167,7 +172,8 @@ p1_pprb_l2_vx20 <- terra::zonal(
   fun="mean", na.rm=TRUE,
   as.polygons=TRUE)
 df <- as.data.frame(p1_pprb_l2_vx20) |>
-  dplyr::rename(subplot=name, height_l2=2, height_vx20=3)
+  dplyr::rename(subplot=name, height_l2=2, height_vx20=3) |>
+  dplyr::mutate(err=height_vx20 - height_l2)
 
 # Plotting
 p <- ggplot(df, aes(x=height_l2, y=height_vx20)) +
@@ -177,5 +183,11 @@ p <- ggplot(df, aes(x=height_l2, y=height_vx20)) +
   geom_abline(slope=1, intercept=0, colour="red") +
   theme_bw()
 ggsave(file.path(out_dir_ssd, "chm_comp.png"), p)
+
+# CC and RMSE
+CC <- cor(df$height_l2, df$height_vx20) # 0.985
+CC_nopp <- 0.9797097
+RMSE <- sqrt(mean(df$err^2)) # 0.615 m
+RMSE_nopp <- 0.8338556
 
 # End
