@@ -1,0 +1,1 @@
+* Computing mean canopy height from LiDAR data in New Caledonia
