@@ -59,6 +59,7 @@ for (i in 1:nfiles) {
       coords=c("lon_lowestmode", "lat_lowestmode"),
       crs="epsg:4326") |>
     sf::st_intersection(borders) |>
+    dplyr::select(-GID_O, -COUNTRY) |>
     sf::st_transform("epsg:32758") |>
     sf::st_write(here(out_dir_ssd, "level2a.gpkg"), append=TRUE)
 }
