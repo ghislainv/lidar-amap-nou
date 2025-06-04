@@ -25,8 +25,8 @@ library(tmap)
 # Agathis folder in project directory is a symlink to /media/ghislain/Agathis
 
 # Output directory
-out_dir_ssd <- here("Agathis/outputs/outputs-lidar-sites")
-dir.create(out_dir_ssd, showWarnings=FALSE)
+out_dir_lidar <- here("Agathis/outputs/outputs-lidar-sites")
+dir.create(out_dir_lidar, showWarnings=FALSE)
 
 # Import lidar database
 ifile <- here("Agathis", "lidar-flights-newcal.csv")
@@ -41,7 +41,7 @@ df <- data.frame(
 # Get boundaries from las files and export as gpkg
 for (i in 1:nsites) {
   site <- lidar_df$site[i]
-  ofile <- here(out_dir_ssd, glue("{site}.gpkg"))
+  ofile <- here(out_dir_lidar, glue("{site}.gpkg"))
   # Only execute if GPKG file does not exist
   if (!file.exists(ofile)) {
     # LAS files
@@ -87,13 +87,13 @@ for (i in 1:nsites) {
 }
 
 # Create sf and export as gpkg
-ofile <- here(out_dir_ssd, "lidar-sites.gpkg")
+ofile <- here(out_dir_lidar, "lidar-sites.gpkg")
 sf_lidar_sites <- sf::st_as_sf(df) |>
   sf::st_set_crs("epsg:32758") |>
   write_sf(ofile)
 
 # Create point data and export as gpkg
-ofile <- here(out_dir_ssd, "lidar-sites-pts.gpkg")
+ofile <- here(out_dir_lidar, "lidar-sites-pts.gpkg")
 df_pts <- df |>
   select(-geometry) |>
   sf::st_as_sf(
@@ -107,7 +107,7 @@ df_pts <- df |>
 # =====================================
 
 # Lidar sites
-ifile <- here(out_dir_ssd, "lidar-sites-pts.gpkg")
+ifile <- here(out_dir_lidar, "lidar-sites-pts.gpkg")
 lidar_sites <- sf::read_sf(ifile)
 
 # Borders from GADM
@@ -142,7 +142,7 @@ tmap_opt <- function(npix=1e5, ...) {
 }
 tmap_opt(npix=1e7)
 green <- rgb(34, 139, 34, 255, maxColorValue=255)
-ofile <- here(out_dir_ssd, "lidar-sites.png")
+ofile <- here(out_dir_lidar, "lidar-sites.png")
 textwidth <- 16.6  # textwidth (in cm) for figure width
 
 # Map
