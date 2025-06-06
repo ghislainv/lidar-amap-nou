@@ -110,44 +110,4 @@ for (i in 1:nsites) {
   }
 }
 
-for (i in 1:nsites) {
-  # Site name and source
-  site <- lidar_df$site[i]
-
-  # CHM
-  dsm <- terra::rast(here(out_dir_chm, glue("dsm_{site}.tif")))
-  dtm <- terra::rast(here(out_dir_chm, glue("dtm_{site}.tif")))
-  if (site == "ouemo") {
-    terra::set.crs(dsm, "epsg:3163")
-    terra::set.crs(dtm, "epsg:3163")
-  }
-  if (site == "grand-lac") {
-    terra::set.crs(dsm, "epsg:32758")
-    terra::set.crs(dtm, "epsg:32758")
-  }
-  chm <- dsm - dtm
-  chm[chm < 0] <- 0
-  varnames(chm) <- "chm"
-  names(chm) <- "height"
-  
-  # Reproject in UTM58S if necessary
-  if (terra::crs(chm) != terra::crs("epsg:32758")) {
-    chm <- terra::project(
-      chm, y="epsg:32758",
-      res=1, method="bilinear",
-      use_gdal=TRUE)
-  }
-  
-  # Save CHM raster file
-  terra::writeRaster(
-    chm,
-    here(out_dir_chm, glue("chm_{site}.tif")),
-    datatype="INT1U",
-    filetype="GTiff",
-    overwrite=TRUE,
-    gdal=c("COMPRESS=DEFLATE"),
-    NAflag=255)
-}
-
-  
 # End of file
