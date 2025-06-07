@@ -179,7 +179,9 @@ for (i in 1:n_als_sites) {
 # Remove gedi shots with unrealistic values
 gedi_lidar_25m_filter <- gedi_lidar_25m |>
   dplyr::filter(rh98 != 0) |>
-  dplyr::filter(!is.na(als_site))
+  dplyr::filter(!is.na(als_site)) |>
+  sf::st_write(here(out_dir_gedi, "gedi-lidar-filter.gpkg"),
+               append=FALSE)
 
 # Plot relationship between GEDI rh98 and ALS canopy height
 # rh98-mean
@@ -188,7 +190,7 @@ p <- gedi_lidar_25m_filter |>
   geom_point() +
   geom_smooth(formula=y~x, method="loess", col="red") +
   theme_bw()
-ggsave(here(out_dir_gedi, "gedi-rh98--als-mean.png"))
+ggsave(here(out_dir_gedi, "gedi-rh98-als-mean.png"))
 
 # rh98-max
 p <- gedi_lidar_25m_filter |>
