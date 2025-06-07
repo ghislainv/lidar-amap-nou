@@ -147,17 +147,21 @@ for (i in 1:n_als_sites) {
   site_name <- substr(als_chm_files[i], 5, nchar(als_chm_files[i]) - 4)
   als_chm <- terra::rast(here(out_dir_chm, als_chm_files[i]))
   # Zonal statistics, mean
+  # Use na.rm=FALSE to remove shots where
+  # als include NAs (eg. borders of als lidar sites) 
   als_mean_canopy_height <- terra::zonal(
     x=als_chm,
     z=gedi_lidar_25m_SpatVect,
-    fun="mean", na.rm=TRUE) |>
+    fun="mean", na.rm=FALSE) |>
     mutate(height=ifelse(is.nan(height), NA, height))
   als_mean_canopy_height <- als_mean_canopy_height$height
   # Zonal statistics, max
+  # Use na.rm=FALSE to remove shots where
+  # als include NAs (eg. borders of als lidar sites) 
   als_max_canopy_height <- terra::zonal(
     x=als_chm,
     z=gedi_lidar_25m_SpatVect,
-    fun="max", na.rm=TRUE) |>
+    fun="max", na.rm=FALSE) |>
     mutate(height=ifelse(is.nan(height), NA, height))
   als_max_canopy_height <- als_max_canopy_height$height
   # Add values to attribute table of gedi shots
