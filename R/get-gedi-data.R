@@ -1,12 +1,22 @@
 # Load libaries
+library(terra)
 library(rGEDI)
 library(here)
 library(glue)
 library(dplyr)
+library(sf)
+library(ggplot2)
 
 # Borders from GADM
 ifile <- here("gisdata", "borders-newcal.gpkg")
 borders <- sf::read_sf(ifile)
+
+# Output directory
+out_dir_download <- here("Agathis/outputs/outputs-gedi/downloads")
+dir.create(out_dir_download, recursive=TRUE, showWarnings=FALSE)
+out_dir_gedi <- here("Agathis/outputs/outputs-gedi")
+out_dir_lidar <- here("Agathis/outputs/outputs-lidar-sites")
+out_dir_chm <- here("Agathis/outputs/outputs-lidar-chm")
 
 # =======================================
 # Find GEDI data within your study area (GEDI finder tool)
@@ -28,12 +38,6 @@ daterange <- c("2022-01-01", "2025-12-31")
 gLevel2A <- gedifinder(
   product="GEDI02_A", ul_lat, ul_lon, lr_lat, lr_lon,
   version="002", daterange=daterange)
-
-# Output directory
-out_dir_download <- here("Agathis/outputs/outputs-gedi/downloads")
-dir.create(out_dir_download, recursive=TRUE, showWarnings=FALSE)
-out_dir_gedi <- here("Agathis/outputs/outputs-gedi")
-out_dir_lidar <- here("Agathis/outputs/outputs-lidar-sites")
 
 # =======================================
 # Downloading GEDI data
@@ -129,5 +133,80 @@ gedi_lidar <- gedi |>
 gedi_lidar_25m <- gedi_lidar |>
   sf::st_buffer(12.5) |>
   sf::st_write(here(out_dir_gedi, "gedi-lidar-25m.gpkg"), append=FALSE)
+
+# Compute canopy height ALS derived for each gedi shot
+ifile <- here(out_dir_gedi, "gedi-lidar-25m.gpkg")
+gedi_lidar_25m_SpatVect <- terra::vect(ifile)
+gedi_lidar_25m <- sf::st_read(ifile) |>
+  mutate(als_height_mean=NA,
+         als_height_max=NA,
+         als_site=NA)
+als_chm_files <- list.files(path=out_dir_chm, pattern="^chm.*\\.tif$")
+n_als_sites <- length(als_chm_files)
+for (i in 1:n_als_sites) {
+  site_name <- substr(als_chm_files[i], 5, nchar(als_chm_files[i]) - 4)
+  als_chm <- terra::rast(here(out_dir_chm, als_chm_files[i]))
+  # Zonal statistics, mean
+  als_mean_canopy_height <- terra::zonal(
+    x=als_chm,
+    z=gedi_lidar_25m_SpatVect,
+    fun="mean", na.rm=TRUE) |>
+    mutate(height=ifelse(is.nan(height), NA, height))
+  als_mean_canopy_height <- als_mean_canopy_height$height
+  # Zonal statistics, max
+  als_max_canopy_height <- terra::zonal(
+    x=als_chm,
+    z=gedi_lidar_25m_SpatVect,
+    fun="max", na.rm=TRUE) |>
+    mutate(height=ifelse(is.nan(height), NA, height))
+  als_max_canopy_height <- als_max_canopy_height$height
+  # Add values to attribute table of gedi shots
+  gedi_lidar_25m <- gedi_lidar_25m |>
+    mutate(als_height_mean=ifelse(
+      !is.na(als_mean_canopy_height),
+      als_mean_canopy_height,
+      als_height_mean)) |>
+    mutate(als_height_max=ifelse(
+      !is.na(als_max_canopy_height),
+      als_max_canopy_height,
+      als_height_max)) |>
+    mutate(als_site=ifelse(
+      !is.na(als_mean_canopy_height),
+      site_name,
+      als_site))
+}
+
+# Remove gedi shots with unrealistic values
+gedi_lidar_25m_filter <- gedi_lidar_25m |>
+  dplyr::filter(rh98 != 0) |>
+  dplyr::filter(!is.na(als_site))
+
+# Plot relationship between GEDI rh98 and ALS canopy height
+# rh98-mean
+p <- gedi_lidar_25m_filter |>
+  ggplot(aes(als_height_mean, rh98, col=als_site)) +
+  geom_point() +
+  geom_smooth(formula=y~x, method="loess", col="red") +
+  theme_bw()
+ggsave(here(out_dir_gedi, "gedi-rh98--als-mean.png"))
+
+# rh98-max
+p <- gedi_lidar_25m_filter |>
+  ggplot(aes(als_height_max, rh98, col=als_site)) +
+  geom_point() +
+  geom_smooth(formula=y~x, method="loess", col="red") +
+  theme_bw()
+ggsave(here(out_dir_gedi, "gedi-rh98-als-max.png"))
+
+# mean-max
+h_max <- max(gedi_lidar_25m_filter$als_height_mean)
+p <- gedi_lidar_25m_filter |>
+  ggplot(aes(als_height_mean, als_height_max, col=als_site)) +
+  geom_point() +
+  geom_smooth(formula=y~x, method="loess", col="red") +
+  geom_segment(x=0, y=0, xend=h_max, yend=h_max,
+               col="black") +
+  theme_bw()
+ggsave(here(out_dir_gedi, "als-max-mean.png"))
 
 # End
